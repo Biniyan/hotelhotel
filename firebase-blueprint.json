@@ -1,0 +1,103 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Represents customer or department staff profile with role-based access",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "name": { "type": "string", "description": "Staff or customer display name" },
+        "email": { "type": "string", "description": "Email address" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "role": {
+          "type": "string",
+          "enum": ["manager", "kitchen", "waiter", "booking_menu", "delivery", "customer"],
+          "description": "Strict department role controlling access"
+        },
+        "department": { "type": "string", "description": "Assigned restaurant department" },
+        "createdAt": { "type": "string", "description": "Creation timestamp" }
+      },
+      "required": ["uid", "name", "role"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Food order record with live department state pipeline",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Order ID" },
+        "orderNumber": { "type": "string", "description": "Order number like MAH-892401" },
+        "userId": { "type": "string", "description": "Customer or Punching Staff UID" },
+        "customerName": { "type": "string", "description": "Customer name" },
+        "customerPhone": { "type": "string", "description": "Customer phone" },
+        "bookingType": { "type": "string", "enum": ["dine_in", "delivery", "takeaway"] },
+        "tableNumber": { "type": "string", "description": "Table for Dine-in orders" },
+        "items": { "type": "array", "description": "Ordered dishes with portion and spice" },
+        "subtotal": { "type": "number" },
+        "grandTotal": { "type": "number" },
+        "orderStatus": {
+          "type": "string",
+          "enum": ["placed", "confirmed", "cooking", "ready_at_table", "ready_for_dispatch", "out_for_delivery", "completed", "cancelled"]
+        },
+        "deliveryAddress": { "type": "string" },
+        "preparedByChef": { "type": "string" },
+        "preparedAt": { "type": "string" },
+        "servedByWaiter": { "type": "string" },
+        "assignedRider": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "orderNumber", "bookingType", "grandTotal", "orderStatus"]
+    },
+    "TableReservation": {
+      "title": "TableReservation",
+      "description": "Dining reservation managed strictly by Booking Manager and GM",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "guestName": { "type": "string" },
+        "guestPhone": { "type": "string" },
+        "guestsCount": { "type": "number" },
+        "date": { "type": "string" },
+        "timeSlot": { "type": "string" },
+        "seatingArea": { "type": "string" },
+        "tableNumber": { "type": "string" },
+        "specialRequests": { "type": "string" },
+        "status": { "type": "string", "enum": ["confirmed", "pending", "seated", "completed", "cancelled"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "guestName", "guestsCount", "date", "timeSlot", "status"]
+    },
+    "MenuItem": {
+      "title": "MenuItem",
+      "description": "Menu supply and availability managed by Menu Supply Manager",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "isAvailable": { "type": "boolean" },
+        "prepTimeMinutes": { "type": "number" }
+      },
+      "required": ["id", "name", "price", "category", "isAvailable"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User and Staff department profiles"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Real-time kitchen, waiter, and delivery order pipeline"
+    },
+    "/reservations/{reservationId}": {
+      "schema": { "$ref": "#/entities/TableReservation" },
+      "description": "Dining table reservations"
+    },
+    "/menu/{menuId}": {
+      "schema": { "$ref": "#/entities/MenuItem" },
+      "description": "Menu supply dishes and stock status"
+    }
+  }
+}

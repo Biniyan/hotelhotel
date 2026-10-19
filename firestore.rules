@@ -1,0 +1,100 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Safety fallback
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function getUserRole() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : 'customer';
+    }
+
+    function isManager() {
+      return isSignedIn() && (
+        getUserRole() == 'manager' ||
+        getUserRole() == 'admin' ||
+        request.auth.token.email == 'tejsinghsaud70@gmail.com'
+      );
+    }
+
+    function isKitchen() {
+      return isManager() || (isSignedIn() && getUserRole() == 'kitchen');
+    }
+
+    function isWaiter() {
+      return isManager() || (isSignedIn() && getUserRole() == 'waiter');
+    }
+
+    function isBookingMenu() {
+      return isManager() || (isSignedIn() && getUserRole() == 'booking_menu');
+    }
+
+    function isDelivery() {
+      return isManager() || (isSignedIn() && getUserRole() == 'delivery');
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isManager());
+      allow write: if isSignedIn() && (request.auth.uid == userId || isManager());
+    }
+
+    // Orders collection
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManager() ||
+        isKitchen() ||
+        isWaiter() ||
+        isDelivery()
+      );
+      allow create: if isSignedIn() && (
+        request.resource.data.userId == request.auth.uid ||
+        isWaiter() ||
+        isManager()
+      );
+      allow update: if isSignedIn() && (
+        isManager() ||
+        isKitchen() ||
+        isWaiter() ||
+        isDelivery() ||
+        resource.data.userId == request.auth.uid
+      );
+      allow delete: if isManager();
+    }
+
+    // Reservations collection
+    match /reservations/{reservationId} {
+      allow read: if isSignedIn() && (
+        resource.data.userId == request.auth.uid ||
+        isManager() ||
+        isBookingMenu()
+      );
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (
+        isManager() ||
+        isBookingMenu() ||
+        resource.data.userId == request.auth.uid
+      );
+    }
+
+    // Menu supply collection
+    match /menu/{menuId} {
+      allow read: if true;
+      allow write: if isManager() || isBookingMenu();
+    }
+
+    // Staff roster collection
+    match /staff/{staffId} {
+      allow read: if isSignedIn() && (isManager() || request.auth.uid == staffId);
+      allow write: if isManager();
+    }
+  }
+}
